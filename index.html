@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Flip Card Slideshow</title>
+<title>Flip Card Slideshow (32) + Progress</title>
 <style>
   :root { --card-max-w: 90vw; --card-max-h: 90vh; }
 
   body {
     margin: 0;
-    font-family: sans-serif;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
     background: url('forest-background.jpg') center center / cover no-repeat fixed;
     min-height: 100vh;
     display: grid;
@@ -24,20 +24,22 @@
     background: rgba(255,255,255,.9);
     border-radius: 16px;
     box-shadow: 0 6px 24px rgba(0,0,0,.2);
-    padding: 56px 16px 16px; /* top room for the button */
+    padding: 72px 16px 24px; /* room for top bar + progress */
     box-sizing: border-box;
     overflow: hidden;
   }
 
-  /* Flip button */
+  /* Top bar */
   .top-bar {
     position: absolute;
     inset: 8px 12px auto 12px;
-    display: flex;
-    justify-content: center;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
     z-index: 5;
   }
+
   .btn {
     appearance: none;
     border: 0;
@@ -48,8 +50,40 @@
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    justify-self: center;
   }
   .btn:active { transform: translateY(1px); }
+
+  /* Progress area */
+  .progress-wrap {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .progress-rail {
+    height: 8px;
+    background: rgba(0,0,0,.12);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #111;
+    border-radius: 999px;
+    transition: width 200ms ease;
+  }
+  .progress-text {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #111;
+    padding: 0 6px;
+    min-width: 90px;
+    text-align: right;
+  }
 
   /* Prev / Next */
   .nav {
@@ -113,21 +147,31 @@
 
 <div class="slideshow-wrap" id="wrap">
   <div class="top-bar">
-    <button id="flipBtn" class="btn">Flip</button>
+    <div></div>
+    <button id="flipBtn" class="btn" aria-label="Flip card (F or Space)">Flip</button>
+    <div></div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" aria-label="Progress">
+      <div class="progress-rail" aria-hidden="true">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-text" id="progressText">Slide 1 / 16</div>
+    </div>
   </div>
 
   <!-- Slides container -->
   <div id="slides"></div>
 
   <!-- Navigation -->
-  <div class="nav prev" id="prevBtn" aria-label="Previous">❮</div>
-  <div class="nav next" id="nextBtn" aria-label="Next">❯</div>
+  <div class="nav prev" id="prevBtn" aria-label="Previous (←)">❮</div>
+  <div class="nav next" id="nextBtn" aria-label="Next (→)">❯</div>
 </div>
 
 <script>
   // === CONFIG ===
-  // We have 24 images: 01.jpg … 24.jpg
-  const TOTAL_IMAGES = 24;
+  // We have 32 images: 01.jpg … 32.jpg (i.e., 16 flip-cards)
+  const TOTAL_IMAGES = 32;
 
   // Build pairs: (01,02), (03,04), ...
   const pairs = [];
@@ -171,7 +215,18 @@
   });
 
   let slideIndex = 0;
+  const totalSlides = pairs.length; // 16 for 32 images
   const slideNodes = () => Array.from(document.querySelectorAll('.slide'));
+
+  const progressText = document.getElementById('progressText');
+  const progressBar  = document.getElementById('progressBar');
+
+  function updateProgress() {
+    const current = slideIndex + 1;
+    progressText.textContent = `Slide ${current} / ${totalSlides}`;
+    const pct = (current - 1) / (totalSlides - 1) * 100;
+    progressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  }
 
   function showSlide(i) {
     const slides = slideNodes();
@@ -183,6 +238,8 @@
     const card = slides[slideIndex].querySelector('.card');
     card.classList.remove('flipped');
     card.dataset.flipped = 'false';
+
+    updateProgress();
   }
 
   function flipCurrent() {
